@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/demo.webp" width="760" alt="A laptop seen from a low angle with its lid nearly shut and figures out on the dimmed screen; the lid swings open, they all jump in fright and run off"></p>
+<p align="center"><img src="docs/demo-lid.webp" width="760" alt="A laptop seen from a low angle with its lid nearly shut and figures out on the dimmed screen; the lid swings open, they all jump in fright and run off"></p>
 
 # Scuttle
 
