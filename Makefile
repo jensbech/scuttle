@@ -1,7 +1,13 @@
 APP := Scuttle.app
 PREFIX ?= /Applications
 
-.PHONY: build install uninstall test clean
+DEMO_DIR ?= .build/demo
+DEMO_FROM ?= 86.6
+DEMO_TO ?= 95
+DEMO_QUALITY ?= 78
+SWIFT_FLAGS ?=
+
+.PHONY: build install uninstall test clean demo
 
 build:
 	scripts/build-app.sh
@@ -18,6 +24,16 @@ uninstall:
 
 test:
 	swift test
+
+demo:
+	swift build -c release $(SWIFT_FLAGS) --product ScuttleSnap
+	rm -rf $(DEMO_DIR)
+	"$$(swift build -c release $(SWIFT_FLAGS) --show-bin-path)/ScuttleSnap" timeline scripts/timelines/catch-demo.json $(DEMO_DIR)/screen \
+		--fps 30 --size 1100x715 --scale 2 --season winter --seed 4 --from $(DEMO_FROM) --to $(DEMO_TO) --plain true --style kawaii
+	swiftc -O scripts/make-demo.swift -o $(DEMO_DIR)/make-demo
+	$(DEMO_DIR)/make-demo scripts/timelines/catch-demo.json $(DEMO_DIR)/screen $(DEMO_DIR)/frames \
+		--from $(DEMO_FROM) --subframes 3 --quality $(DEMO_QUALITY) --webp docs/demo-catch.webp
+	img2webp $(DEMO_DIR)/frames/img2webp.args
 
 clean:
 	rm -rf .build .build-release build dist

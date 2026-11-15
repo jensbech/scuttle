@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/demo-lid.webp" width="760" alt="A laptop seen from a low angle with its lid nearly shut and figures out on the dimmed screen; the lid swings open, they all jump in fright and run off"></p>
+<p align="center"><img src="docs/demo-catch.webp" width="800" alt="A silver laptop on a dark desk, seen from desk height with its lid nearly shut: on the dimmed screen little penguins and snowmen doze round a campfire. The lid swings open, they all freeze with exclamation marks, then scramble off and leave an empty desktop"></p>
 
 # Scuttle
 

@@ -160,6 +160,14 @@ swift run -c release ScuttleSnap catch /tmp/catch.png --style sticker --season w
 swift run -c release ScuttleSnap bench --season christmas
 ```
 
+### The README animation
+
+```
+make demo                     # rebuilds docs/demo-catch.webp, about five minutes
+```
+
+This runs the whole pipeline: `ScuttleSnap timeline` renders the screen from `scripts/timelines/catch-demo.json` (winter, seed 4, a 1100x715 desktop at 2x), `scripts/make-demo.swift` builds a laptop in SceneKit, plays the screen frames on its display while the lid follows the same timeline and the camera moves, renders each frame at twice the size with motion blur and tone maps it down to 1600x1000, and `img2webp` encodes the result. It needs `img2webp` (`brew install webp`). `DEMO_QUALITY` sets the WebP quality, and `make-demo --only 0,120` renders single frames for a quick look.
+
 ## Releasing
 
 ```

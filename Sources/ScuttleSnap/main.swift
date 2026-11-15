@@ -387,6 +387,20 @@ func runStyles(_ args: Arguments) {
     print("wrote \(out) \(image.width)x\(image.height)")
 }
 
+func drawLabel(_ text: String, at point: CGPoint, size: CGFloat, color: CGColor, weight: CGFloat = 0, in ctx: CGContext) -> CGFloat {
+    let base = CTFontCreateUIFontForLanguage(.system, size, nil) ?? CTFontCreateWithName("Helvetica" as CFString, size, nil)
+    let traits = [kCTFontWeightTrait: weight] as CFDictionary
+    let descriptor = CTFontDescriptorCreateWithAttributes([kCTFontTraitsAttribute: traits] as CFDictionary)
+    let font = CTFontCreateCopyWithAttributes(base, size, nil, descriptor)
+    let attributes = [kCTFontAttributeName as String: font, kCTForegroundColorAttributeName as String: color] as CFDictionary
+    guard let attributed = CFAttributedStringCreate(nil, text as CFString, attributes) else { return 0 }
+    let line = CTLineCreateWithAttributedString(attributed)
+    ctx.textMatrix = .identity
+    ctx.textPosition = point
+    CTLineDraw(line, ctx)
+    return CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+}
+
 func drawBackdrop(size: CGSize, in ctx: CGContext) {
     let space = CGColorSpace(name: CGColorSpace.sRGB)!
     let w = size.width, h = size.height
@@ -398,62 +412,163 @@ func drawBackdrop(size: CGSize, in ctx: CGContext) {
     ]
     let gradient = CGGradient(colorSpace: space, colorComponents: colors, locations: [0, 0.35, 0.7, 1], count: 4)!
     ctx.drawLinearGradient(gradient, start: CGPoint(x: 0, y: 0), end: CGPoint(x: w * 0.35, y: h), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-    ctx.setFillColor(red: 1, green: 0.85, blue: 0.6, alpha: 0.2)
-    ctx.fillEllipse(in: CGRect(x: w * 0.55, y: -h * 0.35, width: w * 0.8, height: h * 0.8))
-
-    ctx.setFillColor(red: 0.96, green: 0.96, blue: 0.97, alpha: 0.82)
-    ctx.fill(CGRect(x: 0, y: h - 24, width: w, height: 24))
-    drawText("Finder   File   Edit   View   Go   Window   Help", at: CGPoint(x: 18, y: h - 17), size: 11, gray: 0.1, in: ctx)
-
-    func window(_ r: CGRect, dark: Bool) {
-        ctx.setFillColor(red: 0, green: 0, blue: 0, alpha: 0.18)
-        ctx.addPath(CGPath(roundedRect: r.offsetBy(dx: 0, dy: -8).insetBy(dx: -6, dy: -6), cornerWidth: 16, cornerHeight: 16, transform: nil))
+    let glow: [CGFloat] = [1, 0.8, 0.62, 0.32, 1, 0.8, 0.62, 0]
+    let radial = CGGradient(colorSpace: space, colorComponents: glow, locations: [0, 1], count: 2)!
+    ctx.drawRadialGradient(radial, startCenter: CGPoint(x: w * 0.22, y: h * 0.12), startRadius: 0, endCenter: CGPoint(x: w * 0.22, y: h * 0.12), endRadius: w * 0.45, options: [])
+    for (i, hill) in [(0.55, 0.36, 0.8, 0.14), (0.12, 0.2, 0.9, 0.1)].enumerated() {
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: -10, y: -10))
+        path.addLine(to: CGPoint(x: -10, y: h * hill.1))
+        path.addCurve(to: CGPoint(x: w + 10, y: h * (hill.1 - 0.06)), control1: CGPoint(x: w * hill.0, y: h * (hill.1 + 0.16)), control2: CGPoint(x: w * hill.2, y: h * (hill.1 - 0.12)))
+        path.addLine(to: CGPoint(x: w + 10, y: -10))
+        path.closeSubpath()
+        ctx.addPath(path)
+        ctx.setFillColor(red: i == 0 ? 0.35 : 0.98, green: i == 0 ? 0.3 : 0.55, blue: i == 0 ? 0.62 : 0.42, alpha: hill.3)
         ctx.fillPath()
+    }
+
+    ctx.setFillColor(red: 0.96, green: 0.96, blue: 0.98, alpha: 0.78)
+    ctx.fill(CGRect(x: 0, y: h - 24, width: w, height: 24))
+    var x: CGFloat = 18
+    for (i, item) in ["Finder", "File", "Edit", "View", "Go", "Window", "Help"].enumerated() {
+        x += drawLabel(item, at: CGPoint(x: x, y: h - 16.5), size: 12.5, color: CGColor(gray: 0.08, alpha: 1), weight: i == 0 ? 0.4 : 0, in: ctx) + 18
+    }
+    _ = drawLabel("Fri 21:47", at: CGPoint(x: w - 78, y: h - 16.5), size: 12.5, color: CGColor(gray: 0.08, alpha: 1), in: ctx)
+    ctx.setFillColor(gray: 0.12, alpha: 1)
+    let battery = CGRect(x: w - 116, y: h - 16, width: 22, height: 10)
+    ctx.setStrokeColor(gray: 0.12, alpha: 0.9)
+    ctx.setLineWidth(1)
+    ctx.addPath(CGPath(roundedRect: battery, cornerWidth: 3, cornerHeight: 3, transform: nil))
+    ctx.strokePath()
+    ctx.fill(CGRect(x: battery.minX + 2, y: battery.minY + 2, width: 13, height: battery.height - 4))
+    ctx.fill(CGRect(x: battery.maxX + 1, y: battery.midY - 2, width: 1.5, height: 4))
+    for k in 0..<3 {
+        let r = CGFloat(3 + k * 3)
+        ctx.addArc(center: CGPoint(x: w - 136, y: h - 17), radius: r, startAngle: .pi * 0.25, endAngle: .pi * 0.75, clockwise: false)
+        ctx.setLineWidth(1.6)
+        ctx.strokePath()
+    }
+
+    func window(_ r: CGRect, dark: Bool, title: String) {
+        ctx.saveGState()
+        ctx.setShadow(offset: CGSize(width: 0, height: -10), blur: 30, color: CGColor(gray: 0, alpha: 0.35))
         let body: CGFloat = dark ? 0.13 : 0.985
         ctx.setFillColor(red: body, green: body, blue: body + (dark ? 0.015 : 0), alpha: 1)
         ctx.addPath(CGPath(roundedRect: r, cornerWidth: 10, cornerHeight: 10, transform: nil))
         ctx.fillPath()
-        let bar: CGFloat = dark ? 0.19 : 0.92
+        ctx.restoreGState()
+        let bar: CGFloat = dark ? 0.19 : 0.93
         ctx.saveGState()
         ctx.addPath(CGPath(roundedRect: r, cornerWidth: 10, cornerHeight: 10, transform: nil))
         ctx.clip()
-        ctx.setFillColor(red: bar, green: bar, blue: bar, alpha: 1)
+        ctx.setFillColor(red: bar, green: bar, blue: bar + (dark ? 0.01 : 0), alpha: 1)
         ctx.fill(CGRect(x: r.minX, y: r.maxY - 30, width: r.width, height: 30))
+        ctx.setFillColor(gray: dark ? 0.06 : 0.82, alpha: 1)
+        ctx.fill(CGRect(x: r.minX, y: r.maxY - 30.5, width: r.width, height: 0.5))
+        var textLeft = r.minX + 22
+        if !dark {
+            ctx.setFillColor(red: 0.94, green: 0.94, blue: 0.95, alpha: 1)
+            ctx.fill(CGRect(x: r.minX, y: r.minY, width: 120, height: r.height - 30.5))
+            ctx.setFillColor(gray: 0.86, alpha: 1)
+            ctx.fill(CGRect(x: r.minX + 120, y: r.minY, width: 0.5, height: r.height - 30.5))
+            let names = ["Recents", "Desktop", "Documents", "Downloads", "Pictures", "Music"]
+            for (i, name) in names.enumerated() {
+                let y = r.maxY - 58 - CGFloat(i) * 22
+                if y < r.minY + 14 { break }
+                if i == 2 {
+                    ctx.setFillColor(red: 0.84, green: 0.86, blue: 0.9, alpha: 1)
+                    ctx.addPath(CGPath(roundedRect: CGRect(x: r.minX + 8, y: y - 6, width: 104, height: 20), cornerWidth: 5, cornerHeight: 5, transform: nil))
+                    ctx.fillPath()
+                }
+                ctx.setFillColor(red: 0.25, green: 0.5, blue: 0.95, alpha: 0.9)
+                ctx.addPath(CGPath(roundedRect: CGRect(x: r.minX + 16, y: y - 1, width: 10, height: 9), cornerWidth: 2, cornerHeight: 2, transform: nil))
+                ctx.fillPath()
+                _ = drawLabel(name, at: CGPoint(x: r.minX + 32, y: y), size: 11, color: CGColor(gray: 0.2, alpha: 1), in: ctx)
+            }
+            textLeft = r.minX + 142
+        }
         ctx.restoreGState()
         let lights: [(CGFloat, CGFloat, CGFloat)] = [(1, 0.37, 0.34), (1, 0.74, 0.18), (0.16, 0.79, 0.25)]
         for (i, c) in lights.enumerated() {
             ctx.setFillColor(red: c.0, green: c.1, blue: c.2, alpha: 1)
             ctx.fillEllipse(in: CGRect(x: r.minX + 12 + CGFloat(i) * 19, y: r.maxY - 21, width: 12, height: 12))
         }
+        let titleWidth = CGFloat(title.count) * 6.6
+        _ = drawLabel(title, at: CGPoint(x: r.midX - titleWidth / 2, y: r.maxY - 19), size: 12, color: CGColor(gray: dark ? 0.75 : 0.25, alpha: 1), weight: 0.3, in: ctx)
         let ink: CGFloat = dark ? 0.62 : 0.3
         var y = r.maxY - 58
         var k = 0
+        let textWidth = r.maxX - 22 - textLeft
         while y > r.minY + 20 {
             let frac = 0.35 + 0.6 * abs(sin(CGFloat(k) * 2.4 + (dark ? 1 : 0)))
-            ctx.setFillColor(red: ink, green: ink, blue: ink, alpha: k % 7 == 0 ? 0.75 : 0.3)
-            ctx.fill(CGRect(x: r.minX + 22, y: y, width: (r.width - 44) * frac, height: k % 7 == 0 ? 7 : 5))
+            if dark && k % 5 == 0 {
+                ctx.setFillColor(red: 0.45, green: 0.85, blue: 0.55, alpha: 0.8)
+            } else if dark && k % 5 == 2 {
+                ctx.setFillColor(red: 0.55, green: 0.7, blue: 1.0, alpha: 0.65)
+            } else {
+                ctx.setFillColor(red: ink, green: ink, blue: ink, alpha: k % 7 == 0 ? 0.75 : 0.3)
+            }
+            let indent: CGFloat = dark ? CGFloat(k % 3) * 14 : 0
+            ctx.addPath(CGPath(roundedRect: CGRect(x: textLeft + indent, y: y, width: (textWidth - indent) * frac, height: k % 7 == 0 ? 7 : 5), cornerWidth: 2, cornerHeight: 2, transform: nil))
+            ctx.fillPath()
             y -= 17
             k += 1
         }
     }
-    window(CGRect(x: w * 0.07, y: h * 0.2, width: w * 0.46, height: h * 0.62), dark: false)
-    window(CGRect(x: w * 0.48, y: h * 0.09, width: w * 0.42, height: h * 0.5), dark: true)
+    window(CGRect(x: w * 0.07, y: h * 0.2, width: w * 0.46, height: h * 0.62), dark: false, title: "Documents")
+    window(CGRect(x: w * 0.48, y: h * 0.09, width: w * 0.42, height: h * 0.5), dark: true, title: "Terminal")
 
     let dockW = min(w * 0.5, 620), dockH: CGFloat = 58
     let dock = CGRect(x: (w - dockW) / 2, y: 6, width: dockW, height: dockH)
-    ctx.setFillColor(red: 1, green: 1, blue: 1, alpha: 0.3)
-    ctx.addPath(CGPath(roundedRect: dock, cornerWidth: 16, cornerHeight: 16, transform: nil))
+    ctx.setFillColor(red: 1, green: 1, blue: 1, alpha: 0.28)
+    ctx.addPath(CGPath(roundedRect: dock, cornerWidth: 18, cornerHeight: 18, transform: nil))
     ctx.fillPath()
+    ctx.setStrokeColor(red: 1, green: 1, blue: 1, alpha: 0.35)
+    ctx.setLineWidth(1)
+    ctx.addPath(CGPath(roundedRect: dock.insetBy(dx: 0.5, dy: 0.5), cornerWidth: 18, cornerHeight: 18, transform: nil))
+    ctx.strokePath()
     let icons = 11
     let pitch = (dockW - 20) / CGFloat(icons)
     for i in 0..<icons {
         let hue = CGFloat(i) / CGFloat(icons)
         let r = 0.55 + 0.4 * sin(hue * 6.28), g = 0.55 + 0.4 * sin(hue * 6.28 + 2.1), b = 0.55 + 0.4 * sin(hue * 6.28 + 4.2)
-        ctx.setFillColor(red: r, green: g, blue: b, alpha: 1)
         let side = pitch - 10
-        let rect = CGRect(x: dock.minX + 10 + CGFloat(i) * pitch + 5, y: dock.minY + (dockH - side) / 2, width: side, height: side)
-        ctx.addPath(CGPath(roundedRect: rect, cornerWidth: side * 0.23, cornerHeight: side * 0.23, transform: nil))
+        let rect = CGRect(x: dock.minX + 10 + CGFloat(i) * pitch + 5, y: dock.minY + (dockH - side) / 2 + 1, width: side, height: side)
+        let shape = CGPath(roundedRect: rect, cornerWidth: side * 0.23, cornerHeight: side * 0.23, transform: nil)
+        ctx.saveGState()
+        ctx.setShadow(offset: CGSize(width: 0, height: -1.5), blur: 3, color: CGColor(gray: 0, alpha: 0.25))
+        ctx.setFillColor(red: r, green: g, blue: b, alpha: 1)
+        ctx.addPath(shape)
         ctx.fillPath()
+        ctx.restoreGState()
+        ctx.saveGState()
+        ctx.addPath(shape)
+        ctx.clip()
+        let shade: [CGFloat] = [1, 1, 1, 0.28, 1, 1, 1, 0, 0, 0, 0, 0.12]
+        let gloss = CGGradient(colorSpace: space, colorComponents: shade, locations: [0, 0.5, 1], count: 3)!
+        ctx.drawLinearGradient(gloss, start: CGPoint(x: 0, y: rect.maxY), end: CGPoint(x: 0, y: rect.minY), options: [])
+        ctx.setFillColor(red: 1, green: 1, blue: 1, alpha: 0.85)
+        let c = CGPoint(x: rect.midX, y: rect.midY)
+        let u = side * 0.18
+        switch i % 4 {
+        case 0: ctx.fillEllipse(in: CGRect(x: c.x - u, y: c.y - u, width: 2 * u, height: 2 * u))
+        case 1: ctx.addPath(CGPath(roundedRect: CGRect(x: c.x - u * 1.3, y: c.y - u, width: 2.6 * u, height: 2 * u), cornerWidth: u * 0.4, cornerHeight: u * 0.4, transform: nil)); ctx.fillPath()
+        case 2:
+            ctx.move(to: CGPoint(x: c.x, y: c.y + u * 1.2))
+            ctx.addLine(to: CGPoint(x: c.x + u * 1.2, y: c.y - u))
+            ctx.addLine(to: CGPoint(x: c.x - u * 1.2, y: c.y - u))
+            ctx.closePath()
+            ctx.fillPath()
+        default:
+            ctx.setStrokeColor(red: 1, green: 1, blue: 1, alpha: 0.85)
+            ctx.setLineWidth(u * 0.5)
+            ctx.strokeEllipse(in: CGRect(x: c.x - u, y: c.y - u, width: 2 * u, height: 2 * u))
+        }
+        ctx.restoreGState()
+        if i % 3 == 0 {
+            ctx.setFillColor(gray: 0.15, alpha: 0.6)
+            ctx.fillEllipse(in: CGRect(x: rect.midX - 1.5, y: dock.minY + 2, width: 3, height: 3))
+        }
     }
 }
 

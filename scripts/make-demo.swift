@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import CoreText
 import SceneKit
 import Metal
 import Accelerate
@@ -35,7 +36,7 @@ struct Options {
 
 let options = Options(Array(CommandLine.arguments.dropFirst()))
 guard options.positional.count >= 3 else {
-    fail("usage: make-demo <timeline.json> <screenFramesDir> <outDir> [--from 86.8] [--fps 30] [--width 1600] [--height 1000] [--supersample 2] [--subframes 3] [--only 0,40,90]")
+    fail("usage: make-demo <timeline.json> <screenFramesDir> <outDir> [--from 86.6] [--fps 30] [--width 1600] [--height 1000] [--supersample 2] [--subframes 3] [--hold 1.3] [--fade 0.6] [--quality 78] [--webp out.webp] [--only 0,40,90]")
 }
 let timelinePath = options.positional[0]
 let screenDir = options.positional[1]
@@ -133,13 +134,15 @@ func writeEnvironment(_ path: String) {
         let lat = (0.5 - (Double(j) + 0.5) / Double(h)) * .pi
         for i in 0..<w {
             let lon = ((Double(i) + 0.5) / Double(w) - 0.5) * 2 * .pi
-            let d = SIMD3<Double>(cos(lat) * sin(lon), sin(lat), cos(lat) * cos(lon))
+            let d = SIMD3<Double>(-cos(lat) * cos(lon), sin(lat), -cos(lat) * sin(lon))
             let up = max(0, d.y), down = max(0, -d.y)
-            var c = SIMD3<Double>(0.020, 0.024, 0.040) + SIMD3<Double>(0.03, 0.035, 0.06) * pow(up, 0.6) - SIMD3<Double>(0.012, 0.014, 0.024) * pow(down, 0.5)
-            c += SIMD3<Double>(1.0, 0.97, 0.93) * 4.2 * box(d, centre: SIMD3(0.15, 0.9, 0.55), up: SIMD3(0, 0, -1), halfW: 0.75, halfH: 0.38, soft: 0.25)
-            c += SIMD3<Double>(0.75, 0.85, 1.0) * 2.6 * box(d, centre: SIMD3(-0.8, 0.25, -0.55), up: SIMD3(0, 1, 0), halfW: 0.12, halfH: 0.9, soft: 0.12)
-            c += SIMD3<Double>(1.0, 0.82, 0.68) * 0.9 * box(d, centre: SIMD3(0.95, 0.2, 0.1), up: SIMD3(0, 1, 0), halfW: 0.35, halfH: 0.5, soft: 0.3)
-            c += SIMD3<Double>(0.6, 0.7, 1.0) * 0.5 * box(d, centre: SIMD3(0.0, 0.3, -1.0), up: SIMD3(0, 1, 0), halfW: 1.2, halfH: 0.25, soft: 0.4)
+            var c = SIMD3<Double>(0.018, 0.021, 0.036) + SIMD3<Double>(0.025, 0.03, 0.05) * pow(up, 0.6) - SIMD3<Double>(0.012, 0.014, 0.024) * pow(down, 0.5)
+            c += SIMD3<Double>(0.97, 0.98, 1.0) * 1.3 * box(d, centre: SIMD3(-0.15, 1, -0.05), up: SIMD3(0, 0, -1), halfW: 0.9, halfH: 0.55, soft: 0.45)
+            c += SIMD3<Double>(0.95, 0.96, 1.0) * 1.5 * box(d, centre: SIMD3(0.05, 0.32, -1), up: SIMD3(0, 1, 0), halfW: 1.3, halfH: 0.32, soft: 0.5)
+            c += SIMD3<Double>(0.97, 0.98, 1.0) * 1.2 * box(d, centre: SIMD3(0.2, 0.7, 0.8), up: SIMD3(0, 1, 0), halfW: 0.7, halfH: 0.25, soft: 0.4)
+            c += SIMD3<Double>(0.8, 0.88, 1.0) * 2.2 * box(d, centre: SIMD3(-0.75, 0.3, -0.6), up: SIMD3(0, 1, 0), halfW: 0.1, halfH: 0.9, soft: 0.1)
+            c += SIMD3<Double>(1.0, 0.9, 0.82) * 1.4 * box(d, centre: SIMD3(0.75, 0.3, -0.6), up: SIMD3(0, 1, 0), halfW: 0.1, halfH: 0.9, soft: 0.1)
+            c += SIMD3<Double>(0.75, 0.8, 1.0) * 0.22 * box(d, centre: SIMD3(0.1, 0.25, 1), up: SIMD3(0, 1, 0), halfW: 1.4, halfH: 0.5, soft: 0.6)
             let k = (j * w + i) * 4
             pixels[k] = Float(max(0, c.x)); pixels[k + 1] = Float(max(0, c.y)); pixels[k + 2] = Float(max(0, c.z)); pixels[k + 3] = 1
         }
@@ -211,7 +214,7 @@ aluminium.roughness.wrapS = .repeat
 aluminium.roughness.wrapT = .repeat
 aluminium.roughness.contentsTransform = SCNMatrix4MakeScale(6, 6, 1)
 let darkMetal = pbr(color(0.16, 0.16, 0.17), metal: 1, rough: 0.42)
-let keyMaterial = pbr(color(0.018, 0.018, 0.02), metal: 0, rough: 0.45)
+let keyMaterial = pbr(color(0.016, 0.016, 0.018), metal: 0, rough: 0.62)
 let wellMaterial = pbr(color(0.012, 0.012, 0.014), metal: 0, rough: 0.7)
 let glassMaterial = pbr(color(0.004, 0.004, 0.005), metal: 0, rough: 0.06)
 let trackpadMaterial = pbr(color(0.78, 0.79, 0.81), metal: 0.9, rough: 0.26)
@@ -235,15 +238,15 @@ let envPath = outDir + "/environment.exr"
 writeEnvironment(envPath)
 scene.lightingEnvironment.contents = URL(fileURLWithPath: envPath)
 scene.lightingEnvironment.intensity = 1
-let horizonColor = color(0.085, 0.095, 0.15)
+let horizonColor = color(0.05, 0.056, 0.09)
 scene.background.contents = bitmap(64, 512) { ctx in
-    let stops: [CGFloat] = [0.035, 0.04, 0.07, 1, 0.07, 0.08, 0.13, 1, 0.085, 0.095, 0.15, 1, 0.085, 0.095, 0.15, 1]
+    let stops: [CGFloat] = [0.02, 0.024, 0.04, 1, 0.04, 0.045, 0.075, 1, 0.05, 0.056, 0.09, 1, 0.05, 0.056, 0.09, 1]
     let g = CGGradient(colorSpace: srgbSpace, colorComponents: stops, locations: [0, 0.35, 0.5, 1], count: 4)!
     ctx.drawLinearGradient(g, start: CGPoint(x: 0, y: 512), end: CGPoint(x: 0, y: 0), options: [])
 }
 scene.fogColor = horizonColor
 scene.fogStartDistance = 70
-scene.fogEndDistance = 320
+scene.fogEndDistance = 230
 scene.fogDensityExponent = 1.2
 
 let laptop = SCNNode()
@@ -270,12 +273,14 @@ func flatShape(_ w: Double, _ d: Double, _ r: Double, x: Double, z: Double, y: D
 
 let pitch = 1.88, keyGap = 0.30
 let fnRow = 1.12
-let rows: [[Double]] = [
-    [1.5] + Array(repeating: 1.0, count: 12) + [1.0],
-    Array(repeating: 1.0, count: 13) + [1.5],
-    [1.5] + Array(repeating: 1.0, count: 12) + [1.0],
-    [1.8] + Array(repeating: 1.0, count: 11) + [1.7],
-    [2.3] + Array(repeating: 1.0, count: 10) + [2.2],
+func row(_ labels: String, width: Double = 1) -> [(Double, String)] { labels.split(separator: " ").map { (width, String($0)) } }
+let rows: [[(Double, String)]] = [
+    [(1.5, "esc")] + (1...12).map { (1.0, "F\($0)") } + [(1.0, "")],
+    row("` 1 2 3 4 5 6 7 8 9 0 - =") + [(1.5, "delete")],
+    [(1.5, "tab")] + row("Q W E R T Y U I O P [ ]") + [(1.0, "\\")],
+    [(1.8, "caps lock")] + row("A S D F G H J K L ; '") + [(1.7, "return")],
+    [(2.3, "shift")] + row("Z X C V B N M , . /") + [(2.2, "shift")],
+    [(1.0, "fn"), (1.0, "control"), (1.0, "option"), (1.25, "command"), (5.0, ""), (1.25, "command"), (1.0, "option")],
 ]
 let keyboardW = 14.5 * pitch
 let keyboardD = fnRow + 5 * pitch
@@ -302,31 +307,62 @@ func keycap(_ w: Double, _ d: Double, x: Double, z: Double) {
     laptop.addChildNode(n)
 }
 let left = -keyboardW / 2
+let legendScale = 80.0
+let legendW = Int(keyboardW * legendScale), legendH = Int(keyboardD * legendScale)
+var legends: [(String, Double, Double, Double, Bool)] = []
 var zCursor = keyboardBack
-for (r, widths) in rows.enumerated() {
+for (r, keys) in rows.enumerated() {
     let rowD = r == 0 ? fnRow : pitch
     var x = left
-    for w in widths {
+    for (w, label) in keys {
         keycap(w * pitch - keyGap, rowD - keyGap, x: x + w * pitch / 2, z: zCursor + rowD / 2)
+        if !label.isEmpty { legends.append((label, x + w * pitch / 2, zCursor + rowD / 2, w * pitch - keyGap, label.count == 1)) }
         x += w * pitch
+    }
+    if r == rows.count - 1 {
+        let z = zCursor + rowD / 2
+        keycap(pitch - keyGap, rowD - keyGap, x: x + pitch / 2, z: z)
+        legends.append(("\u{25C0}", x + pitch / 2, z, pitch - keyGap, true))
+        x += pitch
+        keycap(pitch - keyGap, rowD / 2 - keyGap * 0.6, x: x + pitch / 2, z: z - rowD / 4)
+        keycap(pitch - keyGap, rowD / 2 - keyGap * 0.6, x: x + pitch / 2, z: z + rowD / 4)
+        legends.append(("\u{25B2}", x + pitch / 2, z - rowD / 4, pitch - keyGap, true))
+        legends.append(("\u{25BC}", x + pitch / 2, z + rowD / 4, pitch - keyGap, true))
+        x += pitch
+        keycap(pitch - keyGap, rowD - keyGap, x: x + pitch / 2, z: z)
+        legends.append(("\u{25B6}", x + pitch / 2, z, pitch - keyGap, true))
     }
     zCursor += rowD
 }
-do {
-    let rowD = pitch
-    let z = zCursor + rowD / 2
-    var x = left
-    for w in [1.0, 1.0, 1.0, 1.25, 5.0, 1.25, 1.0] {
-        keycap(w * pitch - keyGap, rowD - keyGap, x: x + w * pitch / 2, z: z)
-        x += w * pitch
+let legendImage = bitmap(legendW, legendH) { ctx in
+    for (label, x, z, w, big) in legends {
+        let arrow = label.unicodeScalars.first.map { $0.value >= 0x25B2 } ?? false
+        let size = (arrow ? 0.18 : big ? 0.34 : 0.2) * legendScale
+        let font = CTFontCreateUIFontForLanguage(.system, size, nil)!
+        let attributes = [kCTFontAttributeName as String: font, kCTForegroundColorAttributeName as String: CGColor(gray: 0.82, alpha: 0.9)] as CFDictionary
+        let line = CTLineCreateWithAttributedString(CFAttributedStringCreate(nil, label as CFString, attributes)!)
+        let bounds = CTLineGetBoundsWithOptions(line, .useOpticalBounds)
+        let px = (x - left) * legendScale, py = Double(legendH) - (z - keyboardBack) * legendScale
+        let tx = big ? px - bounds.width / 2 : px - w * legendScale / 2 + 0.16 * legendScale
+        let ty = big ? py - bounds.height / 2 - bounds.minY : py - (pitch * 0.5 - keyGap) * legendScale + 0.14 * legendScale
+        ctx.textPosition = CGPoint(x: tx, y: ty)
+        CTLineDraw(line, ctx)
     }
-    keycap(pitch - keyGap, rowD - keyGap, x: x + pitch / 2, z: z)
-    x += pitch
-    keycap(pitch - keyGap, rowD / 2 - keyGap * 0.6, x: x + pitch / 2, z: z - rowD / 4)
-    keycap(pitch - keyGap, rowD / 2 - keyGap * 0.6, x: x + pitch / 2, z: z + rowD / 4)
-    x += pitch
-    keycap(pitch - keyGap, rowD - keyGap, x: x + pitch / 2, z: z)
 }
+let legendMaterial = SCNMaterial()
+legendMaterial.lightingModel = .physicallyBased
+legendMaterial.diffuse.contents = legendImage
+legendMaterial.diffuse.mipFilter = .linear
+legendMaterial.diffuse.maxAnisotropy = 16
+legendMaterial.metalness.contents = 0.0
+legendMaterial.roughness.contents = 0.6
+legendMaterial.transparencyMode = .aOne
+legendMaterial.writesToDepthBuffer = false
+let legendNode = SCNNode(geometry: SCNPlane(width: keyboardW, height: keyboardD))
+legendNode.geometry?.materials = [legendMaterial]
+legendNode.eulerAngles.x = -.pi / 2
+legendNode.position = SCNVector3(0, keyY + keyHeight + 0.004, keyboardBack + keyboardD / 2)
+laptop.addChildNode(legendNode)
 
 let grille = SCNMaterial()
 grille.lightingModel = .physicallyBased
@@ -356,13 +392,6 @@ let padW = 13.2, padD = 8.0
 let padZ = baseD / 2 - 1.15 - padD / 2
 laptop.addChildNode(flatShape(padW + 0.07, padD + 0.07, 0.62, x: 0, z: padZ, y: baseTop + 0.002, thickness: 0.02, chamfer: 0, material: gapMaterial))
 laptop.addChildNode(flatShape(padW, padD, 0.58, x: 0, z: padZ, y: baseTop + 0.006, thickness: 0.03, chamfer: 0.01, material: trackpadMaterial))
-
-let notchShape = SCNShape(path: roundedPath(4.6, 1.4, 0.7), extrusionDepth: 0.6)
-notchShape.materials = [gapMaterial]
-let thumbNotch = SCNNode(geometry: notchShape)
-thumbNotch.eulerAngles.x = -.pi / 2
-thumbNotch.position = SCNVector3(0, baseTop - 0.05, baseD / 2 + 0.25)
-_ = thumbNotch
 
 for (i, port) in [(2.2, 0.55), (4.6, 0.32), (6.6, 0.32)].enumerated() {
     let s = SCNShape(path: roundedPath(port.0 == 2.2 ? 1.6 : 0.9, port.1, port.1 / 2.2), extrusionDepth: 0.04)
@@ -422,10 +451,10 @@ lidPivot.addChildNode(spillNode)
 
 let key = SCNLight()
 key.type = .spot
-key.intensity = 1600
-key.color = color(1.0, 0.97, 0.92)
-key.spotInnerAngle = 30
-key.spotOuterAngle = 70
+key.intensity = 1300
+key.color = color(0.96, 0.97, 1.0)
+key.spotInnerAngle = 18
+key.spotOuterAngle = 58
 key.castsShadow = true
 key.shadowMapSize = CGSize(width: 4096, height: 4096)
 key.shadowRadius = 14
@@ -439,38 +468,50 @@ keyNode.position = SCNVector3(-35, 95, 55)
 keyNode.look(at: SCNVector3(0, 0, -3))
 scene.rootNode.addChildNode(keyNode)
 
-let shadowImage = bitmap(512, 512) { ctx in
-    ctx.setFillColor(CGColor(gray: 1, alpha: 1))
-    ctx.fill(CGRect(x: 0, y: 0, width: 512, height: 512))
-    ctx.setShadow(offset: .zero, blur: 26, color: CGColor(gray: 0, alpha: 1))
-    ctx.setFillColor(CGColor(gray: 0.15, alpha: 1))
-    ctx.addPath(CGPath(roundedRect: CGRect(x: 56, y: 76, width: 400, height: 360), cornerWidth: 18, cornerHeight: 18, transform: nil))
-    ctx.fillPath()
-}
-let contact = SCNMaterial()
-contact.lightingModel = .constant
-contact.diffuse.contents = shadowImage
-contact.blendMode = .multiply
-contact.writesToDepthBuffer = false
-let contactNode = SCNNode(geometry: SCNPlane(width: baseW * 512 / 400, height: baseD * 512 / 360))
-contactNode.geometry?.materials = [contact]
-contactNode.eulerAngles.x = -.pi / 2
-contactNode.position = SCNVector3(0, 0.02, 0)
-contactNode.renderingOrder = 5
-scene.rootNode.addChildNode(contactNode)
+let overhead = SCNLight()
+overhead.type = .area
+overhead.areaType = .rectangle
+overhead.areaExtents = simd_float3(90, 60, 1)
+overhead.drawsArea = false
+overhead.intensity = 900
+overhead.color = color(0.95, 0.96, 1.0)
+let overheadNode = SCNNode()
+overheadNode.light = overhead
+overheadNode.position = SCNVector3(-5, 95, 10)
+overheadNode.eulerAngles.x = -.pi / 2
+scene.rootNode.addChildNode(overheadNode)
 
-let floor = SCNFloor()
-floor.reflectivity = 0.07
-floor.reflectionFalloffEnd = 12
-floor.reflectionResolutionScaleFactor = 0.5
-let deskMaterial = pbr(color(0.10, 0.105, 0.125), metal: 0, rough: 0.55)
-deskMaterial.diffuse.contents = noiseImage(512, seed: 3, amount: 0.04, base: 0.12)
-deskMaterial.multiply.contents = color(0.85, 0.88, 1.0)
-deskMaterial.diffuse.wrapS = .repeat
-deskMaterial.diffuse.wrapT = .repeat
-deskMaterial.diffuse.contentsTransform = SCNMatrix4MakeScale(20, 20, 1)
-floor.materials = [deskMaterial]
-scene.rootNode.addChildNode(SCNNode(geometry: floor))
+
+let deskSize = 900.0
+let deskImage = bitmap(2048, 2048) { ctx in
+    guard let data = ctx.data else { return }
+    let p = data.bindMemory(to: UInt8.self, capacity: 2048 * 2048 * 4)
+    var state: UInt64 = 99
+    for y in 0..<2048 {
+        for x in 0..<2048 {
+            state = state &* 6364136223846793005 &+ 1442695040888963407
+            let n = Double(state >> 11) / Double(1 << 53) - 0.5
+            let dx = (Double(x) / 2047 - 0.5) * deskSize
+            let dz = (Double(y) / 2047 - 0.5) * deskSize - 4
+            let r = (dx * dx * 0.7 + dz * dz).squareRoot()
+            let k = smooth((r - 20) / 170)
+            let qx = abs(dx) - (baseW / 2 - cornerR), qz = abs(dz + 4) - (baseD / 2 - cornerR)
+            let sdf = (max(qx, 0) * max(qx, 0) + max(qz, 0) * max(qz, 0)).squareRoot() + min(max(qx, qz), 0) - cornerR
+            let contact = 1 - 0.82 * exp(-max(0, sdf + 0.4) / 1.6) - 0.25 * exp(-max(0, sdf) / 7)
+            let v = mix(0.15, 0.045, k) * contact + n * 0.01
+            let i = (y * 2048 + x) * 4
+            p[i] = UInt8(clamp(v * 0.93) * 255); p[i + 1] = UInt8(clamp(v * 0.96) * 255); p[i + 2] = UInt8(clamp(v * 1.08) * 255); p[i + 3] = 255
+        }
+    }
+}
+let deskMaterial = pbr(color(0.1, 0.1, 0.1), metal: 0, rough: 0.82)
+deskMaterial.diffuse.contents = deskImage
+deskMaterial.diffuse.mipFilter = .linear
+deskMaterial.diffuse.maxAnisotropy = 16
+let desk = SCNNode(geometry: SCNPlane(width: deskSize, height: deskSize))
+desk.geometry?.materials = [deskMaterial]
+desk.eulerAngles.x = -.pi / 2
+scene.rootNode.addChildNode(desk)
 
 let camera = SCNCamera()
 camera.wantsHDR = true
@@ -482,9 +523,6 @@ camera.bloomIntensity = 0
 camera.screenSpaceAmbientOcclusionIntensity = 0.8
 camera.screenSpaceAmbientOcclusionRadius = 1.2
 camera.screenSpaceAmbientOcclusionDepthThreshold = 0.5
-camera.wantsDepthOfField = true
-camera.focalBlurSampleCount = 12
-camera.apertureBladeCount = 8
 camera.sensorHeight = 24
 let cameraNode = SCNNode()
 cameraNode.camera = camera
@@ -500,27 +538,24 @@ func lerpShot(_ a: Shot, _ b: Shot, _ t: Double) -> Shot {
     Shot(eye: mix(a.eye, b.eye, t), target: mix(a.target, b.target, t), focal: mix(a.focal, b.focal, t))
 }
 
-let wedgeStart = Shot(eye: SIMD3(11, 3.4, 72), target: SIMD3(0.5, 4.0, 0), focal: 50)
-let wedgeEnd = Shot(eye: SIMD3(4, 2.4, 44), target: SIMD3(0.3, 4.6, 0), focal: 55)
-let heroStart = Shot(eye: SIMD3(9, 20, 62), target: SIMD3(0.3, 11.2, -8), focal: 50)
-let heroEnd = Shot(eye: SIMD3(6.5, 19.5, 58), target: SIMD3(0.2, 11.4, -8), focal: 50)
+let wedgeStart = Shot(eye: SIMD3(10, 3.2, 50), target: SIMD3(0.5, 4.6, 0), focal: 40)
+let wedgeEnd = Shot(eye: SIMD3(4, 2.5, 37), target: SIMD3(0.3, 4.8, 0), focal: 40)
+let catchShot = Shot(eye: SIMD3(5.5, 17.5, 44), target: SIMD3(0.3, 11.6, -9), focal: 48)
+let settleShot = Shot(eye: SIMD3(8, 19, 53), target: SIMD3(0.4, 11.0, -8), focal: 46)
 
 let clipStart = from
-let wedgeSpan = rise.start - clipStart
-let craneStart = rise.start - 0.15
-let craneEnd = rise.end + 1.25
+let clipEnd = from + Double(screenFiles.count - 1) / fps
+let craneStart = rise.start - 0.22
+let catchTime = rise.end + 0.3
+let settleHold = options.double("hold", 1.3)
 
 func shot(at t: Double) -> Shot {
-    let a = lerpShot(wedgeStart, wedgeEnd, (t - clipStart) / wedgeSpan)
-    let b = lerpShot(heroStart, heroEnd, smooth((t - craneEnd) / 6))
-    return lerpShot(a, b, smoother((t - craneStart) / (craneEnd - craneStart)))
-}
-
-func lidLocalToWorld(_ p: SIMD3<Double>, angle: Double) -> SIMD3<Double> {
-    let a = (90 - angle) * .pi / 180
-    let y = p.y * cos(a) - p.z * sin(a)
-    let z = p.y * sin(a) + p.z * cos(a)
-    return SIMD3(p.x, hingeY + y, hingeZ + z)
+    let push = lerpShot(wedgeStart, wedgeEnd, (t - clipStart) / (rise.start - clipStart))
+    let after = lerpShot(catchShot, settleShot, smooth((t - catchTime) / (clipEnd - settleHold - catchTime)))
+    let k = (t - craneStart) / (catchTime + 0.2 - craneStart)
+    let eye = mix(push.eye, after.eye, smooth(k))
+    let target = mix(push.target, after.target, smooth(pow(clamp(k), 0.6)))
+    return Shot(eye: eye, target: target, focal: mix(push.focal, after.focal, smooth(k)))
 }
 
 func pose(at t: Double) {
@@ -530,9 +565,6 @@ func pose(at t: Double) {
     cameraNode.position = vec(s.eye)
     cameraNode.look(at: vec(s.target), up: SCNVector3(0, 1, 0), localFront: SCNVector3(0, 0, -1))
     camera.focalLength = s.focal
-    let centre = lidLocalToWorld(SIMD3(0, displayCentreY, lidFace), angle: angle)
-    camera.focusDistance = simd_length(centre - s.eye)
-    camera.fStop = 5.6 * 100
 }
 
 let renderW = outWidth * supersample, renderH = outHeight * supersample
@@ -682,6 +714,7 @@ func noise() -> Float {
     rng = rng &* 6364136223846793005 &+ 1442695040888963407
     return Float(rng >> 40) / Float(1 << 24)
 }
+let ditherPattern: [Float] = (0..<(outWidth * outHeight)).map { _ in (noise() + noise() - 1) / 255 }
 
 func tone(_ x: Float) -> Float {
     let k: Float = 0.78
@@ -748,7 +781,7 @@ func finish(index: Int, samples: Int, fade: Double) {
             let nx = Float(x) / Float(w) - 0.5
             let vignette = 1 - 0.35 * pow(nx * nx * 1.1 + ny * ny * 1.6, 1.3)
             let o = (y * w + x) * 4
-            let dither = (noise() + noise() - 1) / 255
+            let dither = ditherPattern[y * w + x]
             for c in 1...3 {
                 func sample(_ buf: [Float]) -> Float {
                     let a = buf[(by * bw + bx) * 4 + c], b = buf[(by * bw + bx1) * 4 + c]
@@ -773,6 +806,7 @@ func finish(index: Int, samples: Int, fade: Double) {
 
 let total = screenFiles.count
 let fadeOut = options.double("fade", 0.6)
+let fadeIn = options.double("fade-in", 0.25)
 let started = Date()
 for (index, name) in screenFiles.enumerated() {
     if let only, !only.contains(index) { continue }
@@ -783,7 +817,7 @@ for (index, name) in screenFiles.enumerated() {
     let luminance = simd_dot(average, SIMD3(0.2126, 0.7152, 0.0722))
     let tint = (average / max(1e-4, luminance) + SIMD3(1, 1, 1)) * 0.25
     spill.color = NSColor(srgbRed: pow(clamp(tint.x), 1 / 2.2), green: pow(clamp(tint.y), 1 / 2.2), blue: pow(clamp(tint.z), 1 / 2.2), alpha: 1)
-    spill.intensity = 1800 * luminance
+    spill.intensity = 1100 * luminance
     let room = clamp(luminance * 3)
     scene.lightingEnvironment.intensity = 0.8 + 0.5 * room
     let moving = abs(displayAngle(t + 0.5 / fps) - displayAngle(t - 0.5 / fps)) > 0.5
@@ -795,7 +829,23 @@ for (index, name) in screenFiles.enumerated() {
         renderSubframe(t + offset)
     }
     let remaining = Double(total - index - 1) / fps
-    let fade = smooth(remaining / fadeOut)
+    let fade = smooth(remaining / fadeOut) * mix(0.45, 1, smooth(Double(index) / (fadeIn * fps)))
     finish(index: index, samples: samples, fade: fade)
     print(String(format: "frame %d/%d t=%.2f angle=%.1f lum=%.3f %.1fs", index + 1, total, t, displayAngle(t), luminance, Date().timeIntervalSince(started)))
+}
+
+if only == nil {
+    let quality = options.double("quality", 78)
+    let webp = options.flags["webp"] ?? outDir + "/demo.webp"
+    var lines = ["-loop 0", "-kmax 1", "-sharp_yuv"]
+    var elapsed = 0.0
+    for index in 0..<total {
+        let next = (Double(index + 1) * 1000 / fps).rounded()
+        lines.append(String(format: "-lossy -q %.0f -m 6 -d %.0f %@/frame-%04d.png", quality, next - elapsed, outDir, index))
+        elapsed = next
+    }
+    lines.append("-o " + webp)
+    let argsPath = outDir + "/img2webp.args"
+    try? (lines.joined(separator: "\n") + "\n").write(toFile: argsPath, atomically: true, encoding: .utf8)
+    print("wrote \(total) frames to \(outDir); encode with: img2webp \(argsPath)")
 }

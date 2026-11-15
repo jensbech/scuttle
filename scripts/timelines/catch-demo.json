@@ -1,0 +1,9 @@
+{
+  "keyframes": [
+    { "t": 0, "angle": 110 },
+    { "t": 1, "angle": 20, "ease": "inOut" },
+    { "t": 90, "angle": 20 },
+    { "t": 90.9, "angle": 110, "ease": "inOut" },
+    { "t": 96, "angle": 110 }
+  ]
+}
