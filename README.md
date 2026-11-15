@@ -1,12 +1,8 @@
-<p align="center"><img src="Assets/logo.png" width="700" alt="Five kawaii figures: a hedgehog, a toadstool, a ghost, a penguin and a chick"></p>
+<p align="center"><img src="docs/demo.webp" width="756" alt="Figures gathered round a campfire on a dimmed screen; the lid opens, they all jump in fright and run off"></p>
 
 # Scuttle
 
 A tiny macOS menu bar toy. Lower your MacBook's lid and little seasonal figures sneak onto the screen and get up to things: building a snowman, kicking a ball around, falling asleep by a campfire. Open the lid and you catch them. They freeze, panic, and scramble off the screen.
-
-<p align="center"><img src="docs/demo.gif" width="756" alt="Figures gathered round a campfire on a dimmed screen; the lid opens, they all jump in fright and run off"></p>
-
-<p align="center"><sub>Lid down: they're out. Lid up: caught.</sub></p>
 
 ## Install
 
