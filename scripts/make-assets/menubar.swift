@@ -30,52 +30,36 @@ func renderGlyph(px: Int) -> CGImage {
     ctx.setLineCap(.round)
     ctx.setLineJoin(.round)
 
-    let feet: [(CGPoint, CGPoint)] = [
-        (CGPoint(x: 5.6, y: 9.0), CGPoint(x: 3.7, y: 7.9)),
-        (CGPoint(x: 5.0, y: 11.5), CGPoint(x: 2.9, y: 11.5)),
-        (CGPoint(x: 5.6, y: 14.0), CGPoint(x: 3.8, y: 15.1)),
+    let cap = CGMutablePath()
+    cap.move(to: CGPoint(x: 1.4, y: 8.8))
+    cap.addCurve(to: CGPoint(x: 9, y: 1.8), control1: CGPoint(x: 1.4, y: 4.5), control2: CGPoint(x: 4.7, y: 1.8))
+    cap.addCurve(to: CGPoint(x: 16.6, y: 8.8), control1: CGPoint(x: 13.3, y: 1.8), control2: CGPoint(x: 16.6, y: 4.5))
+    cap.addCurve(to: CGPoint(x: 15.1, y: 10.4), control1: CGPoint(x: 16.6, y: 9.8), control2: CGPoint(x: 16.0, y: 10.4))
+    cap.addLine(to: CGPoint(x: 2.9, y: 10.4))
+    cap.addCurve(to: CGPoint(x: 1.4, y: 8.8), control1: CGPoint(x: 2.0, y: 10.4), control2: CGPoint(x: 1.4, y: 9.8))
+    cap.closeSubpath()
+    ctx.addPath(cap)
+    ctx.fillPath()
+
+    let stem = CGMutablePath()
+    stem.move(to: CGPoint(x: 5.9, y: 11.2))
+    stem.addLine(to: CGPoint(x: 12.1, y: 11.2))
+    stem.addCurve(to: CGPoint(x: 13.0, y: 14.2), control1: CGPoint(x: 12.7, y: 12.0), control2: CGPoint(x: 13.0, y: 13.1))
+    stem.addCurve(to: CGPoint(x: 10.4, y: 16.6), control1: CGPoint(x: 13.0, y: 15.7), control2: CGPoint(x: 12.0, y: 16.6))
+    stem.addLine(to: CGPoint(x: 7.6, y: 16.6))
+    stem.addCurve(to: CGPoint(x: 5.0, y: 14.2), control1: CGPoint(x: 6.0, y: 16.6), control2: CGPoint(x: 5.0, y: 15.7))
+    stem.addCurve(to: CGPoint(x: 5.9, y: 11.2), control1: CGPoint(x: 5.0, y: 13.1), control2: CGPoint(x: 5.3, y: 12.0))
+    stem.closeSubpath()
+    ctx.addPath(stem)
+    ctx.fillPath()
+
+    ctx.setBlendMode(.clear)
+    let holes: [(CGFloat, CGFloat, CGFloat)] = [
+        (9.0, 4.9, 1.35), (4.7, 7.3, 1.0), (13.3, 7.3, 1.0), (7.55, 13.6, 0.8), (10.45, 13.6, 0.8),
     ]
-    ctx.setLineWidth(1.9)
-    for (a, b) in feet {
-        for m in [1, -1] as [CGFloat] {
-            ctx.move(to: CGPoint(x: 9 + (a.x - 9) * m, y: a.y))
-            ctx.addLine(to: CGPoint(x: 9 + (b.x - 9) * m, y: b.y))
-        }
+    for (x, y, r) in holes {
+        ctx.fillEllipse(in: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2))
     }
-    ctx.strokePath()
-
-    ctx.setLineWidth(1.1)
-    for m in [1, -1] as [CGFloat] {
-        ctx.move(to: CGPoint(x: 9 + 1.2 * m, y: 4.4))
-        ctx.addQuadCurve(to: CGPoint(x: 9 + 3.5 * m, y: 2.7), control: CGPoint(x: 9 + 1.6 * m, y: 2.5))
-    }
-    ctx.strokePath()
-    for m in [1, -1] as [CGFloat] {
-        ctx.fillEllipse(in: CGRect(x: 9 + 3.7 * m - 1.05, y: 2.6 - 1.05, width: 2.1, height: 2.1))
-    }
-
-    ctx.fillEllipse(in: CGRect(x: 6.2, y: 3.5, width: 5.6, height: 4.6))
-
-    let body = CGRect(x: 4.6, y: 6.9, width: 8.8, height: 9.0)
-    ctx.setBlendMode(.clear)
-    ctx.fillEllipse(in: body.insetBy(dx: -0.8, dy: -0.8))
-    ctx.setBlendMode(.normal)
-    ctx.setLineWidth(1.9)
-    for (a, b) in feet {
-        for m in [1, -1] as [CGFloat] {
-            ctx.move(to: CGPoint(x: 9 + (a.x - 9) * m, y: a.y))
-            ctx.addLine(to: CGPoint(x: 9 + (b.x - 9) * m, y: b.y))
-        }
-    }
-    ctx.strokePath()
-    ctx.fillEllipse(in: body)
-
-    ctx.setBlendMode(.clear)
-    ctx.setLineCap(.butt)
-    ctx.setLineWidth(0.85)
-    ctx.move(to: CGPoint(x: 9, y: 8.4))
-    ctx.addLine(to: CGPoint(x: 9, y: 16.2))
-    ctx.strokePath()
     ctx.setBlendMode(.normal)
     return ctx.makeImage()!
 }
@@ -119,6 +103,7 @@ let g1 = renderGlyph(px: 18)
 let g2 = renderGlyph(px: 36)
 writePNG(g1, args[1] + "/MenuBarIcon.png")
 writePNG(g2, args[1] + "/MenuBarIcon@2x.png")
+writePNG(renderGlyph(px: 54), args[1] + "/MenuBarIcon@3x.png")
 if args.count >= 3 {
     try? FileManager.default.createDirectory(atPath: args[2], withIntermediateDirectories: true)
     preview(g1, g2, dark: false, path: args[2] + "/menubar-preview-light.png")
