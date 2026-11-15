@@ -1,0 +1,14 @@
+{
+  "loop": true,
+  "keyframes": [
+    { "t": 0, "angle": 105 },
+    { "t": 3, "angle": 25, "ease": "inOut" },
+    { "t": 9, "angle": 25 },
+    { "t": 10, "angle": 55, "ease": "inOut" },
+    { "t": 12, "angle": 55 },
+    { "t": 13.5, "angle": 25, "ease": "inOut" },
+    { "t": 18, "angle": 25 },
+    { "t": 18.3, "angle": 105, "ease": "inOut" },
+    { "t": 23, "angle": 105 }
+  ]
+}

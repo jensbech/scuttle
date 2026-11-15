@@ -1,0 +1,145 @@
+#!/bin/zsh
+set -euo pipefail
+zmodload zsh/datetime zsh/mathfunc
+
+STATE="$HOME/Library/Application Support/Scuttle/state.json"
+
+usage() {
+  cat <<'TXT'
+Usage: scripts/lid <command>
+
+Drives a running Scuttle without touching the lid.
+
+  on | off | toggle          enable or disable the effect
+  angle <deg>                hold a fixed lid angle
+  sweep <from> <to> <secs>   step the held angle from one value to another
+  sensor                     go back to the real lid sensor
+  play <name|file.json>      play a timeline (peek, slow-open, tease, or a path)
+  stop                       stop the timeline
+  ambush                     everyone settles in at once, then gets caught by the
+                             open lid
+  sleep <stage|wake>         stage: as if the display just slept, hold a full frozen
+                             scene; wake: as if it just woke, the scene gets caught
+  hud [on|off|toggle]        status line on the overlay
+  population <n>             number of figures
+  season <auto|name>         seasonal cast: spring, summer, autumn, winter,
+                             halloween, christmas, newyear
+  hemisphere [northern|southern|toggle]
+                             which way Automatic flips the four seasons
+  idle now|hold|wake|off|<s> now: act as if you just went idle (figures creep in,
+                             the next keypress or mouse move scatters them);
+                             hold: like now but ignores real input until wake;
+                             wake: end it; off or a number of seconds: the setting
+  style <name>               art style: kawaii, sticker, hose, mascot, doodle
+  weather live|off|<name>    live weather, none, or a fixed kind: clear, cloudy,
+                             rain, snow, storm, fog, wind
+  night auto|on|off          force night on or off for testing (auto: live
+                             reading or the clock)
+  rare [name]                summon this season's rare visitor, or a named one:
+                             bunny, turtle, fox, polarbear, blackcat, santa,
+                             comet, ufo
+  album reset                forget every rare visitor spotted so far
+  surroundings [on|off|toggle]
+                             let figures notice window tops, the Dock and the
+                             pointer (on by default)
+  ledge <x> <y> <w> [h]      add a pretend window top for testing: a ledge from x
+                             to x+w at height y, in overlay points from the bottom
+                             left of the screen (h: how far down it reaches,
+                             default all the way)
+  ledge clear                remove the pretend ledges
+  pointer <x> <y>            pin the pointer at a spot (same coordinates) for testing
+  pointer clear              back to the real pointer
+  state [key]                print state.json, or one value from it
+  quit                       quit Scuttle
+
+Commands go through the scuttle:// URL scheme (open -g, so focus is not stolen).
+Set SCUTTLE_BIN to a Scuttle binary to hand commands to an unbundled dev build
+instead, for example SCUTTLE_BIN=.build-app/debug/Scuttle.
+TXT
+}
+
+send() {
+  if [[ -n "${SCUTTLE_BIN:-}" ]]; then
+    "$SCUTTLE_BIN" "scuttle://$1" >/dev/null
+  else
+    open -g "scuttle://$1"
+  fi
+}
+
+need() {
+  if (( $1 < $2 )); then
+    usage >&2
+    exit 2
+  fi
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  on|off|toggle|sensor|stop|ambush|quit)
+    send "$cmd" ;;
+  angle|population|season|idle|weather|night|style|sleep)
+    need $# 2
+    send "$cmd/$2" ;;
+  rare)
+    if (( $# >= 2 )); then send "rare/$2"; else send rare; fi ;;
+  album)
+    need $# 2
+    if [[ "$2" != reset ]]; then
+      usage >&2
+      exit 2
+    fi
+    send album/reset ;;
+  hud|hemisphere|surroundings)
+    send "$cmd/${2:-toggle}" ;;
+  ledge)
+    need $# 2
+    if [[ "$2" == clear ]]; then
+      send ledge/clear
+    else
+      need $# 4
+      send "ledge?x=$2&y=$3&w=$4${5:+&h=$5}"
+    fi ;;
+  pointer)
+    need $# 2
+    if [[ "$2" == clear ]]; then
+      send pointer/clear
+    else
+      need $# 3
+      send "pointer?x=$2&y=$3"
+    fi ;;
+  play)
+    need $# 2
+    if [[ "$2" == */* || "$2" == *.json ]]; then
+      send "play?file=${2:A}"
+    else
+      send "play/$2"
+    fi ;;
+  sweep)
+    need $# 4
+    from=$2 to=$3 secs=$4
+    steps=$(( int(secs * 10) ))
+    (( steps < 1 )) && steps=1
+    start=$EPOCHREALTIME
+    for (( i = 0; i <= steps; i++ )); do
+      printf -v a '%.1f' $(( from + (to - from) * i / (steps + 0.0) ))
+      send "angle/$a"
+      wait_for=$(( start + secs * (i + 1) / (steps + 1.0) - EPOCHREALTIME ))
+      (( wait_for > 0 )) && sleep $wait_for
+    done ;;
+  state)
+    if [[ ! -f "$STATE" ]]; then
+      echo "Scuttle is not running (no $STATE)" >&2
+      exit 1
+    fi
+    if (( $# >= 2 )); then
+      plutil -extract "$2" raw -o - "$STATE"
+    else
+      cat "$STATE"
+      echo
+    fi ;;
+  -h|--help|help|"")
+    usage ;;
+  *)
+    usage >&2
+    exit 2 ;;
+esac
