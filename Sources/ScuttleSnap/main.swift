@@ -505,7 +505,7 @@ func runTimeline(_ args: Arguments) {
         peak = max(peak, world.critters.count)
         if step % every == 0 && t >= from - 1e-9 && t <= until + 1e-9 {
             ctx.draw(backdrop, in: CGRect(origin: .zero, size: size))
-            let hud = String(format: "t %6.2fs  angle %5.1f  light %.2f  critters %d", t, angle, world.light, world.critters.count)
+            let hud: String? = args.flags["plain"] != nil ? nil : String(format: "t %6.2fs  angle %5.1f  light %.2f  critters %d", t, angle, world.light, world.critters.count)
             renderer.draw(Scene(size: size, light: world.light, critters: world.critters, time: t, props: world.props, scale: k),
                           options: RenderOptions(darkness: darken, hud: hud, season: season, weather: weather, night: night, style: style), in: ctx)
             guard let image = ctx.makeImage() else { fail("could not make frame") }

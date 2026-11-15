@@ -4,6 +4,10 @@
 
 A tiny macOS menu bar toy. Lower your MacBook's lid and little seasonal figures sneak onto the screen and get up to things: building a snowman, kicking a ball around, falling asleep by a campfire. Open the lid and you catch them. They freeze, panic, and scramble off the screen.
 
+<p align="center"><img src="docs/demo.gif" width="756" alt="Figures gathered round a campfire on a dimmed screen; the lid opens, they all jump in fright and run off"></p>
+
+<p align="center"><sub>Lid down: they're out. Lid up: caught.</sub></p>
+
 ## Install
 
 ```
@@ -21,6 +25,12 @@ Requires macOS 13 or later and the Swift toolchain (Xcode or the command line to
 Lower the lid to somewhere between 20 and 40 degrees, wait a few seconds, then open it. The longer the lid stays down, the more figures come out and the more they get done.
 
 Everything else is in the menu bar item: how many figures, the season, the art style (Kawaii, Sticker, Rubber-hose, Mascot, Doodle), the idle trigger, and Preview, which plays the effect without touching the lid.
+
+## Art styles
+
+Every figure is drawn in five styles. Pick one from the menu.
+
+<p align="center"><img src="docs/styles.png" width="640" alt="A hedgehog, ghost, penguin and chick drawn in the five styles: Kawaii blob, Sticker, Rubber-hose, Mascot and Doodle"></p>
 
 ## Privacy
 
