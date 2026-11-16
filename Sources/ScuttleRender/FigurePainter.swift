@@ -86,7 +86,7 @@ final class FigurePainter {
         if cachedBytes > FigurePainter.cacheLimit { purge() }
     }
 
-    func begin(_ ctx: CGContext, shadows: Bool, time: Double = 0, bounds: CGSize = .zero) {
+    func begin(_ ctx: CGContext, shadows: Bool, time: Double = 0, bounds: CGSize = .zero, matchSpace: Bool = true) {
         self.ctx = ctx
         self.shadows = shadows
         self.time = time.isFinite ? time : 0
@@ -97,7 +97,7 @@ final class FigurePainter {
         let s = max(1, min(6, (m.a * m.a + m.b * m.b).squareRoot()))
         let rounded = (s * 2).rounded() / 2
         var space = CGColorSpace(name: CGColorSpace.sRGB)!
-        if let cs = ctx.colorSpace, cs.model == .rgb, cs.supportsOutput { space = cs }
+        if matchSpace, let cs = ctx.colorSpace, cs.model == .rgb, cs.supportsOutput { space = cs }
         if rounded != scale || !CFEqual(space, spriteSpace) || style != cachedStyle {
             scale = rounded
             spriteSpace = space

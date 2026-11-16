@@ -35,11 +35,10 @@ final class Overlay {
     private let headless: Bool
     private var link: AnyObject?
     private var timer: Timer?
+    static let linkStall = 0.05
 
-    var onFrame: (() -> Void)? {
-        get { view.onFrame }
-        set { view.onFrame = newValue }
-    }
+    var onFrame: (() -> Void)?
+    private var lastLinked = 0.0
 
     var size: CGSize { view.bounds.size }
 
@@ -61,6 +60,11 @@ final class Overlay {
         view.wantsLayer = true
         view.layerContentsRedrawPolicy = .onSetNeedsDisplay
         window.contentView = view
+        view.onFrame = { [weak self] in
+            guard let self else { return }
+            self.lastLinked = CACurrentMediaTime()
+            self.onFrame?()
+        }
     }
 
     static var builtInScreen: NSScreen? {
@@ -133,11 +137,14 @@ final class Overlay {
             displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
             displayLink.add(to: .main, forMode: .common)
             link = displayLink
-        } else {
-            let t = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in self?.view.onFrame?() }
-            RunLoop.main.add(t, forMode: .common)
-            timer = t
         }
+        let t = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
+            guard let self, CACurrentMediaTime() - self.lastLinked > Overlay.linkStall else { return }
+            self.onFrame?()
+        }
+        t.tolerance = 0.002
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     func stopFrames() {

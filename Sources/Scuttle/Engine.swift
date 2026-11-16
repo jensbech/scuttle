@@ -682,7 +682,8 @@ final class Engine {
         let maxDarkness = Engine.idleDarkness + (Engine.lidDarkness - Engine.idleDarkness) * shade
         let options = RenderOptions(
             darkness: settings.darken, hud: text, maxDarkness: maxDarkness,
-            season: season, weather: weather, night: night, style: settings.style
+            season: season, weather: weather, night: night, style: settings.style,
+            matchSpace: false
         )
         renderer.draw(scene, options: options, in: ctx)
     }

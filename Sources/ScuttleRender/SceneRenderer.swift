@@ -37,6 +37,7 @@ public struct RenderOptions {
     public var weather: Weather?
     public var night: Bool
     public var style: ArtStyle
+    public var matchSpace: Bool
 
     public init(
         darkness: Bool = true,
@@ -48,7 +49,8 @@ public struct RenderOptions {
         season: Season? = nil,
         weather: Weather? = nil,
         night: Bool = false,
-        style: ArtStyle = .kawaii
+        style: ArtStyle = .kawaii,
+        matchSpace: Bool = true
     ) {
         self.darkness = darkness
         self.hud = hud
@@ -60,6 +62,7 @@ public struct RenderOptions {
         self.weather = weather
         self.night = night
         self.style = style
+        self.matchSpace = matchSpace
     }
 }
 
@@ -89,7 +92,7 @@ public final class SceneRenderer {
             if k != 1 { ctx.scaleBy(x: k, y: k) }
             painter.spritesEnabled = options.spriteCache
             painter.style = options.style
-            painter.begin(ctx, shadows: options.shadows, time: scene.time, bounds: inner.size)
+            painter.begin(ctx, shadows: options.shadows, time: scene.time, bounds: inner.size, matchSpace: options.matchSpace)
             props.begin(ctx, style: options.style, time: scene.time, shadows: options.shadows)
             stage.draw(inner, figures: painter, props: props)
             props.end()
@@ -269,7 +272,7 @@ public final class SceneRenderer {
         if abs(m.b) < 1e-9, abs(m.c) < 1e-9, m.a > 0, abs(m.a - m.d) < 1e-6 {
             let pw = Int((size.width * m.a).rounded(.up)), ph = Int((size.height * m.a).rounded(.up))
             var target = space
-            if let cs = ctx.colorSpace, cs.model == .rgb, cs.supportsOutput { target = cs }
+            if options.matchSpace, let cs = ctx.colorSpace, cs.model == .rgb, cs.supportsOutput { target = cs }
             if let image = shadeImage(pw: pw, ph: ph, dark: dark, options: options, space: target) {
                 let ox = (m.tx.rounded() - m.tx) / m.a, oy = (m.ty.rounded() - m.ty) / m.a
                 ctx.draw(image, in: CGRect(x: ox, y: oy + size.height - CGFloat(ph) / m.a, width: CGFloat(pw) / m.a, height: CGFloat(ph) / m.a))
